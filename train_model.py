@@ -15,9 +15,13 @@ import os
 import pandas as pd
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import joblib
+import json
 
 def main():
     # ---------------------------------------------------------
@@ -65,34 +69,38 @@ def main():
     print("Dataset split into training and testing sets.\n")
     
     # ---------------------------------------------------------
-    # Step 4: Train a simple Random Forest Classifier
+    # Step 4: Create an Automated Preprocessing Pipeline and Train
     # ---------------------------------------------------------
-    print("Training Random Forest Classifier...")
-    # Initialize the Random Forest model with a fixed random state for reproducibility
-    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    print("Training Primary Model (Random Forest)...")
+    primary_model = Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+    ])
+    primary_model.fit(X_train, y_train)
     
-    # Train the model using the training data
-    model.fit(X_train, y_train)
+    print("Training Backup Model (Logistic Regression)...")
+    backup_model = Pipeline([
+        ('scaler', StandardScaler()),
+        ('classifier', LogisticRegression(random_state=42, max_iter=200))
+    ])
+    backup_model.fit(X_train, y_train)
     
-    # Display clear console output indicating successful training
-    print("Model trained successfully.\n")
+    print("Models trained successfully.\n")
     
     # ---------------------------------------------------------
-    # Step 5: Evaluate the model
+    # Step 5: Evaluate the models
     # ---------------------------------------------------------
-    print("--- Model Evaluation ---")
-    
-    # Calculate training accuracy
-    y_train_pred = model.predict(X_train)
-    train_accuracy = accuracy_score(y_train, y_train_pred)
-    
-    # Calculate testing accuracy
-    y_test_pred = model.predict(X_test)
-    test_accuracy = accuracy_score(y_test, y_test_pred)
-    
-    # Display Training and Testing accuracy
-    print(f"Training accuracy: {train_accuracy * 100:.2f}%")
-    print(f"Testing accuracy: {test_accuracy * 100:.2f}%\n")
+    print("--- Primary Model Evaluation ---")
+    p_train_acc = accuracy_score(y_train, primary_model.predict(X_train))
+    p_test_acc = accuracy_score(y_test, primary_model.predict(X_test))
+    print(f"Training accuracy: {p_train_acc * 100:.2f}%")
+    print(f"Testing accuracy: {p_test_acc * 100:.2f}%\n")
+
+    print("--- Backup Model Evaluation ---")
+    b_train_acc = accuracy_score(y_train, backup_model.predict(X_train))
+    b_test_acc = accuracy_score(y_test, backup_model.predict(X_test))
+    print(f"Training accuracy: {b_train_acc * 100:.2f}%")
+    print(f"Testing accuracy: {b_test_acc * 100:.2f}%\n")
     
     # ---------------------------------------------------------
     # Step 6: Save the trained model
@@ -103,15 +111,28 @@ def main():
     models_dir = os.path.join(script_dir, "models")
     os.makedirs(models_dir, exist_ok=True)
     
-    # Define the save path for the model
-    model_path = os.path.join(models_dir, "model_v1.pkl")
+    # Define the save paths
+    primary_path = os.path.join(models_dir, "model_primary.pkl")
+    backup_path = os.path.join(models_dir, "model_backup.pkl")
     
-    # Save the trained model using joblib
-    joblib.dump(model, model_path)
+    # Save the trained models using joblib
+    joblib.dump(primary_model, primary_path)
+    joblib.dump(backup_model, backup_path)
+    print("Models saved successfully.")
     
-    # Display clear console output indicating successful saving
-    print("Model saved successfully.")
-    print(f"Model saved to: {os.path.relpath(model_path, script_dir)}")
+    # Initialize Registry
+    registry_path = os.path.join(script_dir, "model_registry.json")
+    registry_data = {
+        "active_model": "primary",
+        "models": {
+            "primary": os.path.relpath(primary_path, script_dir),
+            "backup": os.path.relpath(backup_path, script_dir)
+        }
+    }
+    with open(registry_path, "w") as f:
+        json.dump(registry_data, f, indent=4)
+        
+    print(f"Registry initialized at: {os.path.relpath(registry_path, script_dir)}")
 
 if __name__ == "__main__":
     main()
