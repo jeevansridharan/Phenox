@@ -1,5 +1,5 @@
 {
-    "active_model": "backup",
+    "active_model": "primary",
     "models": {
         "primary": "models\\model_primary.pkl",
         "backup": "models\\model_backup.pkl"
