@@ -12,6 +12,7 @@ It handles:
 """
 
 import os
+import numpy as np
 import pandas as pd
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
@@ -22,6 +23,31 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 import joblib
 import json
+
+
+def build_augmented_dataset(iris, copies_per_row=6, noise_scale=0.35, label_flip_rate=0.08):
+    """Create a larger, harder dataset by adding noisy synthetic copies."""
+    base_features = iris.data
+    base_targets = iris.target
+
+    feature_blocks = [base_features]
+    target_blocks = [base_targets]
+
+    for _ in range(copies_per_row):
+        noise = np.random.normal(loc=0.0, scale=noise_scale, size=base_features.shape)
+        augmented_features = base_features + noise
+        augmented_targets = base_targets.copy()
+
+        flip_mask = np.random.random(size=augmented_targets.shape[0]) < label_flip_rate
+        if np.any(flip_mask):
+            augmented_targets[flip_mask] = np.random.randint(0, len(iris.target_names), size=flip_mask.sum())
+
+        feature_blocks.append(augmented_features)
+        target_blocks.append(augmented_targets)
+
+    X = np.vstack(feature_blocks)
+    y = np.concatenate(target_blocks)
+    return X, y
 
 def main():
     # ---------------------------------------------------------
@@ -60,16 +86,21 @@ def main():
     print(f"Target classes: {list(iris.target_names)}\n")
     
     # ---------------------------------------------------------
-    # Step 3: Split the dataset into training and testing sets
+    # Step 3: Expand the dataset before splitting
+    # ---------------------------------------------------------
+    # The synthetic copies make the task harder and reduce the chance of a perfect score.
+    X, y = build_augmented_dataset(iris)
+    print(f"Augmented dataset size: {len(X)} rows")
+
+    # ---------------------------------------------------------
+    # Step 4: Split the dataset into training and testing sets
     # ---------------------------------------------------------
     # We use 80% of the data for training and 20% for testing to evaluate performance on unseen data
-    X = iris.data
-    y = iris.target
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print("Dataset split into training and testing sets.\n")
     
     # ---------------------------------------------------------
-    # Step 4: Create an Automated Preprocessing Pipeline and Train
+    # Step 5: Create an Automated Preprocessing Pipeline and Train
     # ---------------------------------------------------------
     print("Training Primary Model (Random Forest)...")
     primary_model = Pipeline([
@@ -88,7 +119,7 @@ def main():
     print("Models trained successfully.\n")
     
     # ---------------------------------------------------------
-    # Step 5: Evaluate the models
+    # Step 6: Evaluate the models
     # ---------------------------------------------------------
     print("--- Primary Model Evaluation ---")
     p_train_acc = accuracy_score(y_train, primary_model.predict(X_train))
@@ -103,7 +134,7 @@ def main():
     print(f"Testing accuracy: {b_test_acc * 100:.2f}%\n")
     
     # ---------------------------------------------------------
-    # Step 6: Save the trained model
+    # Step 7: Save the trained model
     # ---------------------------------------------------------
     # Ensure the models directory exists inside PhoenixAI/
     # We use __file__ to ensure the path is relative to this script's directory
