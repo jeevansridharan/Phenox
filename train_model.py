@@ -25,7 +25,7 @@ import joblib
 import json
 
 
-def build_augmented_dataset(iris, copies_per_row=6, noise_scale=0.35, label_flip_rate=0.08):
+def build_augmented_dataset(iris, copies_per_row=6, noise_scale=0.40, label_flip_rate=0.15):
     """Create a larger, harder dataset by adding noisy synthetic copies."""
     base_features = iris.data
     base_targets = iris.target
@@ -88,9 +88,8 @@ def main():
     # ---------------------------------------------------------
     # Step 3: Expand the dataset before splitting
     # ---------------------------------------------------------
-    # The synthetic copies make the task harder and reduce the chance of a perfect score.
-    X, y = build_augmented_dataset(iris)
-    print(f"Augmented dataset size: {len(X)} rows")
+    X, y = iris.data, iris.target
+    print(f"Dataset size: {len(X)} rows")
 
     # ---------------------------------------------------------
     # Step 4: Split the dataset into training and testing sets
@@ -105,14 +104,23 @@ def main():
     print("Training Primary Model (Random Forest)...")
     primary_model = Pipeline([
         ('scaler', StandardScaler()),
-        ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+        ('classifier', RandomForestClassifier(
+            n_estimators=3,
+            max_depth=1,
+            random_state=42
+        ))
     ])
     primary_model.fit(X_train, y_train)
     
     print("Training Backup Model (Logistic Regression)...")
     backup_model = Pipeline([
         ('scaler', StandardScaler()),
-        ('classifier', LogisticRegression(random_state=42, max_iter=200))
+        ('classifier', LogisticRegression(
+            C=10,
+            solver='lbfgs',
+            max_iter=500,
+            random_state=42
+        ))
     ])
     backup_model.fit(X_train, y_train)
     

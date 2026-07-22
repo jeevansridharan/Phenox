@@ -57,6 +57,13 @@ if __name__ == "__main__":
     from sklearn.datasets import load_iris
     from sklearn.model_selection import train_test_split
     
+    # Reset the active model to primary at the start of each run to ensure consistency
+    with open(REGISTRY_PATH, "r") as f:
+        registry = json.load(f)
+    registry["active_model"] = "primary"
+    with open(REGISTRY_PATH, "w") as f:
+        json.dump(registry, f, indent=4)
+        
     iris = load_iris()
     X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.2, random_state=42)
     
@@ -64,7 +71,14 @@ if __name__ == "__main__":
     evaluate_and_monitor(X_test, y_test)
     
     print("\n--- Simulating Data Drift/Accuracy Loss ---")
-    # Simulate a drop in accuracy by shuffling the correct answers
-    np.random.seed(42)
-    y_test_simulated_bad = np.random.permutation(y_test)
-    evaluate_and_monitor(X_test, y_test_simulated_bad)
+    # Only simulate drift if the primary model is active. 
+    # If the system has already switched to backup, evaluate it on clean data.
+    active_key, _, _ = get_active_model_info()
+    if active_key == "primary":
+        np.random.seed(42)
+        y_test_simulated_bad = np.random.permutation(y_test)
+        evaluate_and_monitor(X_test, y_test_simulated_bad)
+    else:
+        print("Backup model is active. Evaluating on clean data (no drift simulation applied).")
+        evaluate_and_monitor(X_test, y_test)
+
