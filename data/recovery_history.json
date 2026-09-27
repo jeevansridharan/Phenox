@@ -1,0 +1,300 @@
+{
+    "recovery_count": 4,
+    "monitoring_points": [
+        {
+            "id": 1,
+            "timestamp": "2026-09-27 12:01:39",
+            "accuracy": 96.67,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "HEALTHY",
+            "notes": "Initial staging verification"
+        },
+        {
+            "id": 2,
+            "timestamp": "2026-09-27 12:08:39",
+            "accuracy": 93.33,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "HEALTHY",
+            "notes": "Production batch telemetry evaluation #1"
+        },
+        {
+            "id": 3,
+            "timestamp": "2026-09-27 12:16:39",
+            "accuracy": 90.0,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "HEALTHY",
+            "notes": "Production batch telemetry evaluation #2"
+        },
+        {
+            "id": 4,
+            "timestamp": "2026-09-27 12:24:39",
+            "accuracy": 63.33,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "DEGRADED",
+            "notes": "Degradation detected: Primary accuracy 63.33% < threshold 90.00%"
+        },
+        {
+            "id": 5,
+            "timestamp": "2026-09-27 12:25:39",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Automated failover: Backup Logistic Regression activated (100.0% accuracy)"
+        },
+        {
+            "id": 6,
+            "timestamp": "2026-09-27 12:37:50",
+            "accuracy": 63.33,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "DEGRADED",
+            "notes": "Evaluation cycle for 'primary' (Accuracy: 63.33%)"
+        },
+        {
+            "id": 7,
+            "timestamp": "2026-09-27 12:37:50",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Post-failover telemetry check for 'backup' (Accuracy: 100.00%)"
+        },
+        {
+            "id": 8,
+            "timestamp": "2026-09-27 12:37:56",
+            "accuracy": 40.0,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "DEGRADED",
+            "notes": "SIMULATED DRIFT: Accuracy dropped to 40.0% (Threshold: 90.00%)"
+        },
+        {
+            "id": 9,
+            "timestamp": "2026-09-27 12:37:56",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Self-healing complete: Backup model activated with 100.0% accuracy"
+        },
+        {
+            "id": 10,
+            "timestamp": "2026-09-27 12:43:01",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Evaluation cycle for 'backup' (Accuracy: 100.0%)"
+        },
+        {
+            "id": 11,
+            "timestamp": "2026-09-27 12:43:51",
+            "accuracy": 30.0,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "DEGRADED",
+            "notes": "SIMULATED DRIFT: Accuracy dropped to 30.0% (Threshold: 90.00%)"
+        },
+        {
+            "id": 12,
+            "timestamp": "2026-09-27 12:43:51",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Self-healing complete: Backup model activated with 100.0% accuracy"
+        },
+        {
+            "id": 13,
+            "timestamp": "2026-09-27 12:49:38",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Evaluation cycle for 'backup' (Accuracy: 100.0%)"
+        }
+    ],
+    "events": [
+        {
+            "id": "evt-1",
+            "stage": 1,
+            "stage_name": "Model Deployed",
+            "timestamp": "2026-09-27 12:01:39",
+            "title": "Primary Model Deployed",
+            "description": "Primary Random Forest Pipeline (v1.2.0-rf-primary) deployed to production monitoring. Threshold configured at 90.00%.",
+            "severity": "info",
+            "model": "primary",
+            "accuracy": 96.67
+        },
+        {
+            "id": "evt-2",
+            "stage": 2,
+            "stage_name": "Accuracy Monitored",
+            "timestamp": "2026-09-27 12:16:39",
+            "title": "Continuous Telemetry Monitored",
+            "description": "Continuous accuracy monitoring cycle executed on incoming validation window. Model within acceptable health bounds.",
+            "severity": "info",
+            "model": "primary",
+            "accuracy": 90.0
+        },
+        {
+            "id": "evt-3",
+            "stage": 3,
+            "stage_name": "Accuracy Degradation Detected",
+            "timestamp": "2026-09-27 12:24:39",
+            "title": "ALERT: Accuracy Below Threshold",
+            "description": "Telemetry alert! Model 'primary' accuracy dropped to 63.33%, falling 26.67% below the safety threshold (90.00%). Failover condition satisfied.",
+            "severity": "alert",
+            "model": "primary",
+            "accuracy": 63.33
+        },
+        {
+            "id": "evt-4",
+            "stage": 4,
+            "stage_name": "Backup Model Activated",
+            "timestamp": "2026-09-27 12:24:39",
+            "title": "Backup Model Activated (Failover)",
+            "description": "Model Recovery Agent initiated automated failover. model_registry.json updated to point active traffic to 'backup' (Logistic Regression).",
+            "severity": "warning",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-5",
+            "stage": 5,
+            "stage_name": "Recovery Completed",
+            "timestamp": "2026-09-27 12:25:39",
+            "title": "System Recovery Completed",
+            "description": "Post-switch telemetry verification confirmed Backup model running with 100.00% accuracy. System status restored to Operational (Recovered).",
+            "severity": "success",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790492870-reset",
+            "stage": 1,
+            "stage_name": "Model Deployed",
+            "timestamp": "2026-09-27 12:37:50",
+            "title": "System Reset to Primary Model",
+            "description": "Manual operator intervention: Reset active model to 'primary' for demo testing.",
+            "severity": "info",
+            "model": "primary",
+            "accuracy": 63.33
+        },
+        {
+            "id": "evt-1790492870-1",
+            "stage": 3,
+            "stage_name": "Accuracy Degradation Detected",
+            "timestamp": "2026-09-27 12:37:50",
+            "title": "ALERT: Accuracy Below Threshold (63.33%)",
+            "description": "Telemetry alert! Model 'primary' accuracy evaluated at 63.33%, dropping below configured threshold 90.00%. Failover condition triggered.",
+            "severity": "alert",
+            "model": "primary",
+            "accuracy": 63.33
+        },
+        {
+            "id": "evt-1790492870-2",
+            "stage": 4,
+            "stage_name": "Backup Model Activated",
+            "timestamp": "2026-09-27 12:37:50",
+            "title": "Backup Model Activated (Failover)",
+            "description": "Model Recovery System executed switch_to_backup(). Active traffic rerouted to 'backup' (Logistic Regression).",
+            "severity": "warning",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790492870-3",
+            "stage": 5,
+            "stage_name": "Recovery Completed",
+            "timestamp": "2026-09-27 12:37:50",
+            "title": "System Recovery Completed",
+            "description": "Automated failover successfully stabilized the inference pipeline. Backup model operational with verified 100.00% accuracy.",
+            "severity": "success",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790492876-drift-deg",
+            "stage": 3,
+            "stage_name": "Accuracy Degradation Detected",
+            "timestamp": "2026-09-27 12:37:56",
+            "title": "ALERT: Data Drift Detected (Accuracy 40.0%)",
+            "description": "Drift simulation detected severe degradation in 'primary' model. Accuracy dropped to 40.0%, violating safety threshold (90.00%).",
+            "severity": "alert",
+            "model": "primary",
+            "accuracy": 40.0
+        },
+        {
+            "id": "evt-1790492876-drift-sw",
+            "stage": 4,
+            "stage_name": "Backup Model Activated",
+            "timestamp": "2026-09-27 12:37:56",
+            "title": "Automated Failover to Backup Model",
+            "description": "switch_to_backup() triggered. Registry updated 'active_model' to 'backup' (Logistic Regression) to mitigate service degradation.",
+            "severity": "warning",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790492876-drift-ok",
+            "stage": 5,
+            "stage_name": "Recovery Completed",
+            "timestamp": "2026-09-27 12:37:56",
+            "title": "System Recovery & Stabilization Completed",
+            "description": "Backup model evaluated on operational dataset with 100.0% accuracy. Zero downtime failover complete.",
+            "severity": "success",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790493196-reset",
+            "stage": 1,
+            "stage_name": "Model Deployed",
+            "timestamp": "2026-09-27 12:43:16",
+            "title": "System Reset to Primary Model",
+            "description": "Manual operator intervention: Reset active model to 'primary' for demo testing.",
+            "severity": "info",
+            "model": "primary",
+            "accuracy": 63.33
+        },
+        {
+            "id": "evt-1790493232-drift-deg",
+            "stage": 3,
+            "stage_name": "Accuracy Degradation Detected",
+            "timestamp": "2026-09-27 12:43:51",
+            "title": "ALERT: Data Drift Detected (Accuracy 30.0%)",
+            "description": "Drift simulation detected severe degradation in 'primary' model. Accuracy dropped to 30.0%, violating safety threshold (90.00%).",
+            "severity": "alert",
+            "model": "primary",
+            "accuracy": 30.0
+        },
+        {
+            "id": "evt-1790493232-drift-sw",
+            "stage": 4,
+            "stage_name": "Backup Model Activated",
+            "timestamp": "2026-09-27 12:43:51",
+            "title": "Automated Failover to Backup Model",
+            "description": "switch_to_backup() triggered. Registry updated 'active_model' to 'backup' (Logistic Regression) to mitigate service degradation.",
+            "severity": "warning",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790493232-drift-ok",
+            "stage": 5,
+            "stage_name": "Recovery Completed",
+            "timestamp": "2026-09-27 12:43:51",
+            "title": "System Recovery & Stabilization Completed",
+            "description": "Backup model evaluated on operational dataset with 100.0% accuracy. Zero downtime failover complete.",
+            "severity": "success",
+            "model": "backup",
+            "accuracy": 100.0
+        }
+    ]
+}

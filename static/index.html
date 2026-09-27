@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phenox Model Recovery — MLOps Observability & Automated Failover Dashboard</title>
+  <meta name="description" content="Production-grade MLOps monitoring and automated recovery dashboard for Phenox AI models. Real-time telemetry, drift detection, and self-healing pipelines.">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <!-- Chart.js local offline copy first, CDN fallback -->
+  <script src="/static/js/chart.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <!-- Phoenix / Shield Icon -->
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M12 8v4"/>
+            <path d="M12 16h.01"/>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <h1>Phenox</h1>
+          <span class="tagline">Model Recovery v1.2</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-target="section-overview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+          <span>System Overview</span>
+        </a>
+
+        <a class="nav-item" data-target="section-active-models">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+            <line x1="6" y1="6" x2="6.01" y2="6"/>
+            <line x1="6" y1="18" x2="6.01" y2="18"/>
+          </svg>
+          <span>Active & Backup Models</span>
+        </a>
+
+        <a class="nav-item" data-target="section-accuracy">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span>Accuracy Telemetry</span>
+        </a>
+
+        <a class="nav-item" data-target="section-recovery-timeline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span>Recovery Timeline</span>
+        </a>
+
+        <a class="nav-item" data-target="section-registry">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          <span>Model Registry</span>
+        </a>
+
+        <a class="nav-item" data-target="section-playground">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span>Live Inference Test</span>
+        </a>
+      </nav>
+
+      <!-- Sidebar Status Footer -->
+      <div class="sidebar-footer">
+        <div class="system-health-badge">
+          <div class="health-header">
+            <span>Failover Engine</span>
+            <span style="font-family: var(--font-mono); color: var(--accent-cyan);">ONLINE</span>
+          </div>
+          <div class="pulse-indicator">
+            <span class="pulse-dot" id="sidebar-pulse-dot"></span>
+            <span id="sidebar-health-mode" style="font-size: 0.8rem; color: var(--text-main); font-weight: 600;">
+              Initializing...
+            </span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Application View -->
+    <div class="main-wrapper">
+      <!-- Top Sticky Navigation Bar -->
+      <header class="top-header">
+        <div class="header-left">
+          <h2 class="page-title">Phenox Model Recovery</h2>
+          <div class="status-chip" id="header-status-chip">
+            <span class="pulse-dot"></span> Checking telemetry...
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Auto Refresh Toggle -->
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-secondary); margin-right: 8px;">
+            <input type="checkbox" id="toggle-auto-refresh" checked style="accent-color: var(--accent-cyan); cursor: pointer;">
+            <label for="toggle-auto-refresh" style="cursor: pointer;">Live Stream (5s)</label>
+          </div>
+
+          <!-- Refresh Button -->
+          <button class="btn btn-secondary btn-sm" id="btn-manual-refresh" title="Refresh Telemetry">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+            </svg>
+            <span>Refresh</span>
+          </button>
+
+          <!-- Evaluation Action -->
+          <button class="btn btn-primary btn-sm" id="btn-run-evaluation" title="Evaluate Active Model on Unseen Test Split">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <span>Run Evaluation</span>
+          </button>
+
+          <!-- Simulate Drift Action (For College Demonstration) -->
+          <button class="btn btn-danger btn-sm" id="btn-simulate-drift" title="Simulate Data Drift & Trigger Automated Failover">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Simulate Drift</span>
+          </button>
+
+          <!-- Reset to Primary -->
+          <button class="btn btn-secondary btn-sm" id="btn-reset-primary" title="Reset Registry back to Primary for fresh demo run">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <span>Reset to Primary</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Scrollable Body -->
+      <main class="content-container">
+
+        <!-- SECTION 1: System Overview KPI Cards -->
+        <section id="section-overview">
+          <div class="kpi-grid">
+            <!-- KPI 1: System Status -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">System Status</span>
+                <div class="kpi-icon emerald">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-system-status" style="font-size: 1.35rem;">Operational</div>
+              <div class="kpi-subtext">
+                <span class="tag-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-emerald);">Self-Healing ML</span>
+                <span>Auto-failover enabled</span>
+              </div>
+            </div>
+
+            <!-- KPI 2: Active Model -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Active Model</span>
+                <div class="kpi-icon cyan">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
+                    <line x1="6" y1="6" x2="6.01" y2="6"/>
+                    <line x1="6" y1="18" x2="6.01" y2="18"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-active-model" style="color: var(--accent-cyan);">PRIMARY</div>
+              <div class="kpi-subtext">
+                <span>Registry:</span>
+                <span style="font-family: var(--font-mono); color: var(--text-highlight);">model_registry.json</span>
+              </div>
+            </div>
+
+            <!-- KPI 3: Current Accuracy -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Current Accuracy</span>
+                <div class="kpi-icon indigo">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-current-accuracy">100.0%</div>
+              <div class="kpi-subtext">
+                <span>Threshold:</span>
+                <span style="font-family: var(--font-mono); color: var(--accent-amber);">90.00%</span>
+              </div>
+            </div>
+
+            <!-- KPI 4: Threshold Trigger -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Recovery Threshold</span>
+                <div class="kpi-icon amber">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="4" y1="21" x2="4" y2="14"/>
+                    <line x1="4" y1="10" x2="4" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12" y2="3"/>
+                    <line x1="20" y1="21" x2="20" y2="16"/>
+                    <line x1="20" y1="12" x2="20" y2="3"/>
+                    <line x1="1" y1="14" x2="7" y2="14"/>
+                    <line x1="9" y1="8" x2="15" y2="8"/>
+                    <line x1="17" y1="16" x2="23" y2="16"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-threshold">90.00%</div>
+              <div class="kpi-subtext">
+                <span class="tag-badge" style="background: rgba(245,158,11,0.15); color: var(--accent-amber);">Failover Trigger</span>
+                <span>Under threshold triggers swap</span>
+              </div>
+            </div>
+
+            <!-- KPI 5: Recovery Count -->
+            <div class="kpi-card">
+              <div class="kpi-top">
+                <span class="kpi-label">Recovery Events</span>
+                <div class="kpi-icon rose">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpi-recovery-count">1</div>
+              <div class="kpi-subtext">
+                <span>Total automated failovers</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: Active Model vs Backup Model Cards -->
+        <section id="section-active-models">
+          <div class="models-comparison-grid">
+            
+            <!-- Active Model Card -->
+            <div class="model-highlight-card active-card">
+              <div class="model-card-header">
+                <div>
+                  <div class="model-badge-group">
+                    <span class="model-type-pill primary">Active Production Model</span>
+                    <span class="model-version-text" id="active-model-version">v1.2.0-rf-primary</span>
+                  </div>
+                  <h3 class="model-title" id="active-model-name">Primary Random Forest Pipeline</h3>
+                </div>
+                <div class="model-status-indicator healthy" id="active-model-status">
+                  <span class="pulse-dot"></span> Healthy
+                </div>
+              </div>
+
+              <!-- Accuracy Meter Box -->
+              <div class="model-accuracy-meter-box">
+                <div class="accuracy-label-row">
+                  <span class="acc-title">Validation Accuracy</span>
+                  <span class="acc-number green" id="active-model-acc-num">63.33%</span>
+                </div>
+                <div class="accuracy-bar-track">
+                  <div class="accuracy-threshold-marker" style="left: 90%;" title="Threshold 90.00%"></div>
+                  <div class="accuracy-bar-fill healthy" id="active-model-acc-fill" style="width: 63.33%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <span>0%</span>
+                  <span style="color: var(--accent-amber);">Threshold 90%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              <!-- Technical Specifications -->
+              <div class="meta-specs-grid">
+                <div class="spec-item">
+                  <div class="spec-name">Classifier</div>
+                  <div class="spec-val" id="active-model-algo">RandomForestClassifier</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">Artifact Path</div>
+                  <div class="spec-val" id="active-model-path">models/model_primary.pkl</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">File Size</div>
+                  <div class="spec-val" id="active-model-size">3.98 KB</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">Pipeline Stages</div>
+                  <div class="spec-val" id="active-model-pipeline">StandardScaler -> RF</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Backup Model Card -->
+            <div class="model-highlight-card backup-card">
+              <div class="model-card-header">
+                <div>
+                  <div class="model-badge-group">
+                    <span class="model-type-pill backup">Hot Fallback Model</span>
+                    <span class="model-version-text" id="backup-model-version">v1.0.0-lr-backup</span>
+                  </div>
+                  <h3 class="model-title" id="backup-model-name">Backup Logistic Regression Pipeline</h3>
+                </div>
+                <div class="model-status-indicator standby" id="backup-model-status">
+                  <span class="pulse-dot"></span> Hot Standby
+                </div>
+              </div>
+
+              <!-- Accuracy Meter Box -->
+              <div class="model-accuracy-meter-box">
+                <div class="accuracy-label-row">
+                  <span class="acc-title">Pre-Verified Benchmark Accuracy</span>
+                  <span class="acc-number cyan" id="backup-model-acc-num">100.0%</span>
+                </div>
+                <div class="accuracy-bar-track">
+                  <div class="accuracy-threshold-marker" style="left: 90%;" title="Threshold 90.00%"></div>
+                  <div class="accuracy-bar-fill healthy" id="backup-model-acc-fill" style="width: 100%;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  <span>0%</span>
+                  <span style="color: var(--accent-amber);">Threshold 90%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+
+              <!-- Technical Specifications -->
+              <div class="meta-specs-grid">
+                <div class="spec-item">
+                  <div class="spec-name">Classifier</div>
+                  <div class="spec-val" id="backup-model-algo">LogisticRegression</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">Artifact Path</div>
+                  <div class="spec-val" id="backup-model-path">models/model_backup.pkl</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">File Size</div>
+                  <div class="spec-val" id="backup-model-size">1.57 KB</div>
+                </div>
+                <div class="spec-item">
+                  <div class="spec-name">Failover SLA</div>
+                  <div class="spec-val" style="color: var(--accent-emerald);">&lt; 15 ms Switch Time</div>
+                </div>
+              </div>
+
+              <!-- Switch Action -->
+              <div style="display: flex; justify-content: flex-end; margin-top: auto;">
+                <button class="btn btn-primary btn-sm" id="btn-promote-backup">Promote to Active</button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- SECTION 3: Accuracy Monitoring Line Chart -->
+        <section id="section-accuracy">
+          <div class="dashboard-card">
+            <div class="card-title-row">
+              <div class="card-title-block">
+                <h3>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-cyan)" fill="none" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                  <span>Model Accuracy Over Time & Threshold Sentinel</span>
+                </h3>
+                <p>Continuous accuracy telemetry stream. Red points mark automated degradation alerts below the 90.00% safety threshold.</p>
+              </div>
+
+              <div class="chart-controls">
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+                  Telemetry checks: <span style="color: var(--text-main); font-weight: 600;" id="stat-min-acc">--</span> to <span style="color: var(--text-main); font-weight: 600;" id="stat-max-acc">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart Canvas -->
+            <div class="chart-canvas-wrapper">
+              <canvas id="accuracyChart"></canvas>
+            </div>
+
+            <!-- Legend & Stats -->
+            <div class="chart-legend-row">
+              <div class="legend-item">
+                <span class="legend-color-box" style="background: var(--accent-cyan);"></span>
+                <span>Active Model Accuracy</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color-box" style="background: var(--accent-rose); border: 1px dashed var(--accent-rose);"></span>
+                <span>Safety Threshold (90.00%)</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color-box" style="background: var(--accent-rose); border-radius: 50%;"></span>
+                <span>Degraded Point Alert</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color-box" style="background: var(--accent-emerald); border-radius: 50%;"></span>
+                <span>Healthy / Recovered Point</span>
+              </div>
+              <div style="margin-left: auto; font-family: var(--font-mono); color: var(--text-muted);">
+                Incidents: <span id="stat-deg-count" style="color: var(--accent-rose); font-weight: 600;">1 incidents</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 4: Recovery Event Timeline & 5-Stage Stepper -->
+        <section id="section-recovery-timeline">
+          <div class="dashboard-card">
+            <div class="card-title-row">
+              <div class="card-title-block">
+                <h3>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-indigo)" fill="none" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span>Model Recovery Event Timeline & Automated Lifecycle</span>
+                </h3>
+                <p>End-to-end self-healing lifecycle from initial deployment through degradation alert to verified backup recovery.</p>
+              </div>
+            </div>
+
+            <!-- 5-Stage Stepper Visualizer -->
+            <div class="recovery-stage-pipeline">
+              <div class="pipeline-track">
+                <div class="pipeline-track-fill" id="pipeline-track-fill" style="width: 100%;"></div>
+              </div>
+
+              <!-- Step 1 -->
+              <div class="stage-step completed" id="stage-step-1">
+                <div class="stage-node">1</div>
+                <div class="stage-label">Model Deployed</div>
+              </div>
+
+              <!-- Step 2 -->
+              <div class="stage-step completed" id="stage-step-2">
+                <div class="stage-node">2</div>
+                <div class="stage-label">Accuracy Monitored</div>
+              </div>
+
+              <!-- Step 3 -->
+              <div class="stage-step completed" id="stage-step-3">
+                <div class="stage-node">3</div>
+                <div class="stage-label">Degradation Detected</div>
+              </div>
+
+              <!-- Step 4 -->
+              <div class="stage-step completed" id="stage-step-4">
+                <div class="stage-node">4</div>
+                <div class="stage-label">Backup Activated</div>
+              </div>
+
+              <!-- Step 5 -->
+              <div class="stage-step completed" id="stage-step-5">
+                <div class="stage-node">5</div>
+                <div class="stage-label">Recovery Completed</div>
+              </div>
+            </div>
+
+            <!-- Audit Log Events List -->
+            <div class="events-timeline-list" id="events-timeline-container">
+              <!-- Dynamically populated by dashboard.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 5: Model Registry -->
+        <section id="section-registry">
+          <div class="dashboard-card">
+            <div class="card-title-row">
+              <div class="card-title-block">
+                <h3>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-purple)" fill="none" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                  </svg>
+                  <span>Model Registry Catalog & Performance Benchmarks</span>
+                </h3>
+                <p>Inventory of verified pipelines stored in the repository. Switch active production traffic with zero downtime.</p>
+              </div>
+            </div>
+
+            <div class="registry-table-wrapper">
+              <table class="registry-table">
+                <thead>
+                  <tr>
+                    <th>Model Name &amp; Version</th>
+                    <th>Algorithm</th>
+                    <th>Test Accuracy</th>
+                    <th>Status</th>
+                    <th>Artifact Size</th>
+                    <th>Trained / Modified</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="registry-table-body">
+                  <!-- Dynamically populated by dashboard.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 6: Live Prediction Playground (Interactive Demo) -->
+        <section id="section-playground">
+          <div class="dashboard-card">
+            <div class="card-title-row">
+              <div class="card-title-block">
+                <h3>
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-emerald)" fill="none" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <span>Live Inference Playground & Prediction Service</span>
+                </h3>
+                <p>Test the currently active model live with Iris flower measurements. Demonstrates real-time inference latency and class confidence.</p>
+              </div>
+            </div>
+
+            <div class="playground-grid">
+              <!-- Feature Inputs Form -->
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
+                  Quick Presets
+                </div>
+                <div class="preset-pills-row">
+                  <button class="preset-pill" data-preset="setosa">🌸 Setosa (5.1, 3.5, 1.4, 0.2)</button>
+                  <button class="preset-pill" data-preset="versicolor">🌺 Versicolor (5.9, 3.0, 4.2, 1.5)</button>
+                  <button class="preset-pill" data-preset="virginica">🪻 Virginica (6.5, 3.0, 5.2, 2.0)</button>
+                </div>
+
+                <!-- Sepal Length -->
+                <div class="form-group">
+                  <div class="form-label">
+                    <span>Sepal Length</span>
+                    <span style="font-family: var(--font-mono); color: var(--accent-cyan);">cm</span>
+                  </div>
+                  <div class="input-slider-wrapper">
+                    <input type="range" class="range-slider" id="slider-sepal_length" min="4.0" max="8.0" step="0.1" value="5.1">
+                    <input type="number" class="num-input" id="num-sepal_length" min="4.0" max="8.0" step="0.1" value="5.1">
+                  </div>
+                </div>
+
+                <!-- Sepal Width -->
+                <div class="form-group">
+                  <div class="form-label">
+                    <span>Sepal Width</span>
+                    <span style="font-family: var(--font-mono); color: var(--accent-cyan);">cm</span>
+                  </div>
+                  <div class="input-slider-wrapper">
+                    <input type="range" class="range-slider" id="slider-sepal_width" min="2.0" max="4.5" step="0.1" value="3.5">
+                    <input type="number" class="num-input" id="num-sepal_width" min="2.0" max="4.5" step="0.1" value="3.5">
+                  </div>
+                </div>
+
+                <!-- Petal Length -->
+                <div class="form-group">
+                  <div class="form-label">
+                    <span>Petal Length</span>
+                    <span style="font-family: var(--font-mono); color: var(--accent-cyan);">cm</span>
+                  </div>
+                  <div class="input-slider-wrapper">
+                    <input type="range" class="range-slider" id="slider-petal_length" min="1.0" max="7.0" step="0.1" value="1.4">
+                    <input type="number" class="num-input" id="num-petal_length" min="1.0" max="7.0" step="0.1" value="1.4">
+                  </div>
+                </div>
+
+                <!-- Petal Width -->
+                <div class="form-group">
+                  <div class="form-label">
+                    <span>Petal Width</span>
+                    <span style="font-family: var(--font-mono); color: var(--accent-cyan);">cm</span>
+                  </div>
+                  <div class="input-slider-wrapper">
+                    <input type="range" class="range-slider" id="slider-petal_width" min="0.1" max="2.5" step="0.1" value="0.2">
+                    <input type="number" class="num-input" id="num-petal_width" min="0.1" max="2.5" step="0.1" value="0.2">
+                  </div>
+                </div>
+
+                <button class="btn btn-primary" id="btn-predict" style="width: 100%; justify-content: center; margin-top: 10px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <span>Predict with Active Model</span>
+                </button>
+              </div>
+
+              <!-- Output Card -->
+              <div class="prediction-result-panel">
+                <div class="flower-avatar" id="pred-flower-emoji">🌸</div>
+                <div class="flower-title" id="pred-flower-name">Iris Setosa</div>
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                  <span class="tag-badge" id="pred-model-pill" style="background: rgba(6,182,212,0.15); color: var(--accent-cyan);">
+                    Served by: PRIMARY
+                  </span>
+                  <span class="tag-badge" style="background: rgba(255,255,255,0.06); font-family: var(--font-mono);" id="pred-latency">
+                    1.4 ms
+                  </span>
+                </div>
+
+                <!-- Class Probabilities Meters -->
+                <div class="prob-bars-container">
+                  <div class="prob-row">
+                    <span class="prob-name">Setosa:</span>
+                    <div class="prob-track">
+                      <div class="prob-fill" id="prob-fill-setosa" style="width: 100%; background: var(--accent-cyan);"></div>
+                    </div>
+                    <span class="prob-percent" id="prob-pct-setosa">100%</span>
+                  </div>
+
+                  <div class="prob-row">
+                    <span class="prob-name">Versicolor:</span>
+                    <div class="prob-track">
+                      <div class="prob-fill" id="prob-fill-versicolor" style="width: 0%; background: var(--accent-indigo);"></div>
+                    </div>
+                    <span class="prob-percent" id="prob-pct-versicolor">0%</span>
+                  </div>
+
+                  <div class="prob-row">
+                    <span class="prob-name">Virginica:</span>
+                    <div class="prob-track">
+                      <div class="prob-fill" id="prob-fill-virginica" style="width: 0%; background: var(--accent-purple);"></div>
+                    </div>
+                    <span class="prob-percent" id="prob-pct-virginica">0%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Dashboard JavaScript Application -->
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

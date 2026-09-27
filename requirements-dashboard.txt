@@ -1,0 +1,8 @@
+# Requirements for Phenox Model Recovery Dashboard
+fastapi>=0.100.0
+uvicorn>=0.20.0
+scikit-learn
+pandas
+joblib
+numpy
+pydantic
