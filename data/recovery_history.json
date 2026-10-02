@@ -1,5 +1,5 @@
 {
-    "recovery_count": 4,
+    "recovery_count": 5,
     "monitoring_points": [
         {
             "id": 1,
@@ -117,6 +117,24 @@
             "threshold": 90.0,
             "status": "RECOVERED",
             "notes": "Evaluation cycle for 'backup' (Accuracy: 100.0%)"
+        },
+        {
+            "id": 14,
+            "timestamp": "2026-10-02 15:53:19",
+            "accuracy": 63.33,
+            "model": "primary",
+            "threshold": 90.0,
+            "status": "DEGRADED",
+            "notes": "Evaluation cycle for 'primary' (Accuracy: 63.33%)"
+        },
+        {
+            "id": 15,
+            "timestamp": "2026-10-02 15:53:19",
+            "accuracy": 100.0,
+            "model": "backup",
+            "threshold": 90.0,
+            "status": "RECOVERED",
+            "notes": "Post-failover telemetry check for 'backup' (Accuracy: 100.00%)"
         }
     ],
     "events": [
@@ -292,6 +310,39 @@
             "timestamp": "2026-09-27 12:43:51",
             "title": "System Recovery & Stabilization Completed",
             "description": "Backup model evaluated on operational dataset with 100.0% accuracy. Zero downtime failover complete.",
+            "severity": "success",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790936599-1",
+            "stage": 3,
+            "stage_name": "Accuracy Degradation Detected",
+            "timestamp": "2026-10-02 15:53:19",
+            "title": "ALERT: Accuracy Below Threshold (63.33%)",
+            "description": "Telemetry alert! Model 'primary' accuracy evaluated at 63.33%, dropping below configured threshold 90.00%. Failover condition triggered.",
+            "severity": "alert",
+            "model": "primary",
+            "accuracy": 63.33
+        },
+        {
+            "id": "evt-1790936599-2",
+            "stage": 4,
+            "stage_name": "Backup Model Activated",
+            "timestamp": "2026-10-02 15:53:19",
+            "title": "Backup Model Activated (Failover)",
+            "description": "Model Recovery System executed switch_to_backup(). Active traffic rerouted to 'backup' (Logistic Regression).",
+            "severity": "warning",
+            "model": "backup",
+            "accuracy": 100.0
+        },
+        {
+            "id": "evt-1790936599-3",
+            "stage": 5,
+            "stage_name": "Recovery Completed",
+            "timestamp": "2026-10-02 15:53:19",
+            "title": "System Recovery Completed",
+            "description": "Automated failover successfully stabilized the inference pipeline. Backup model operational with verified 100.00% accuracy.",
             "severity": "success",
             "model": "backup",
             "accuracy": 100.0
